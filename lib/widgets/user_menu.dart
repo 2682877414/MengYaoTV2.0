@@ -128,21 +128,26 @@ class _UserMenuState extends State<UserMenu> {
   }
 
   Future<void> _handleLogout() async {
-    // 清空所有缓存
+    // 清空缓存（保留）
     LiveService.clearAllCache();
     LocalSearchCacheService().clearCache();
     PageCacheService().clearAllCache();
 
-    // 只清除密码和cookies，保留服务器地址和用户名
-    await UserDataService.clearPasswordAndCookies();
+    // 🔥 🔥 🔥 只清登录态，不清密码、不清用户名、不清服务器
+    await UserDataService.saveUserData(
+      serverUrl: await UserDataService.getServerUrl() ?? '',
+      username: await UserDataService.getUsername() ?? '',
+      password: await UserDataService.getPassword() ?? '', // 🔥 保留密码
+      cookies: '', // 只清登录态
+    );
 
     await UserDataService.saveIsLocalMode(false);
 
-    // 跳转到登录页，并移除所有之前的路由（强制销毁所有页面）
+    // 跳转到登录页
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false,
+            (route) => false,
       );
     }
   }

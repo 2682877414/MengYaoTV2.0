@@ -464,7 +464,7 @@ class _MainLayoutState extends State<MainLayout> {
               onTap: widget.onHomeTap,
               behavior: HitTestBehavior.opaque,
               child: Text(
-                'Selene',
+                '梦瑶影视 2.0',
                 style: FontUtils.sourceCodePro(
                   fontSize: 24,
                   fontWeight: FontWeight.w400,
