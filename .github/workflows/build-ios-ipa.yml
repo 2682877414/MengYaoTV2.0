@@ -1,6 +1,8 @@
 name: iOS ipa 单独构建
+
 on:
   workflow_dispatch:
+  
 permissions:
   contents: write
 jobs:
