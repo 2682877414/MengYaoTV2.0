@@ -1,0 +1,44 @@
+name: 仅构建 Android
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 获取版本号
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          [ -z "$VERSION" ] && VERSION="1.0.0"
+          VERSION=$(echo "$VERSION" | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+
+      - name: 安装 Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: 构建安卓APK（分64位/32位）
+        run: |
+          flutter pub get
+          flutter build apk --release --split-per-abi
+          mkdir dist
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/梦瑶影视-Android64-${{ steps.get_version.outputs.version }}.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/梦瑶影视-Android32-${{ steps.get_version.outputs.version }}.apk
+
+      - name: 上传APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-APKs
+          path: dist/*.apk
