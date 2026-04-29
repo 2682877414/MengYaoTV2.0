@@ -1,0 +1,30 @@
+name: 构建梦瑶影视安装包
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.3'
+          channel: stable
+          
+      - name: 安装依赖
+        run: flutter pub get
+
+      - name: 构建 Windows 安装包
+        run: flutter build windows --release
+
+      - name: 上传 Windows 安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: 梦瑶影视2.0-Windows安装包
+          path: build/windows/x64/runner/Release/
