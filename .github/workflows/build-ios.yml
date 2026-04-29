@@ -1,0 +1,27 @@
+name: 仅构建 iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+
+      - name: 构建 iOS（无签名）
+        run: |
+          flutter pub get
+          flutter build ios --release --no-codesign
+
+      - name: 上传 IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-IPA
+          path: build/ios/ipa/
