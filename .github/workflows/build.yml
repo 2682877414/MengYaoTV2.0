@@ -1,4 +1,4 @@
-name: 构建梦瑶影视 2.0 (Windows)
+name: 梦瑶影视 2.0 (Windows)
 
 on:
   workflow_dispatch:
