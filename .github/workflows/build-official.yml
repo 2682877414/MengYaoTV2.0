@@ -15,27 +15,52 @@ permissions:
   actions: write
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - name: android
-            os: ubuntu-latest
-            build-args: "--android-only"
-          - name: macos_ios
-            os: macos-latest
-            build-args: "--apple-only"
-          - name: windows-amd64
-            os: windows-latest
-    
-    runs-on: ${{ matrix.os }}
-    env:
-      NDK_VERSION: '29.0.14033849'
-      NDK_VERSION_DEPS: '27.0.12077973'
-    name: Build ${{ matrix.name }}
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
-    
+  build-windows:
+    runs-on: windows-latest
+    name: Build Windows
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        shell: pwsh
+        run: |
+          $line = Get-Content pubspec.yaml | Select-String '^version:'
+          if ($line) {
+            $version = $line.Line -replace 'version: ', ''
+            $version = $version.Trim()
+          } else {
+            $version = "1.0.0"
+          }
+          $version = $version -split '\+' | Select-Object -First 1
+          echo "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+          cache: true
+
+      - name: Build Windows
+        shell: pwsh
+        run: |
+          $version = "${{ steps.get_version.outputs.version }}"
+          flutter pub get
+          mkdir dist -Force
+          flutter build windows --release
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "dist/selene-$version-windows-x64-portable.zip" -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: dist/*
+
+  build-android:
+    runs-on: ubuntu-latest
+    name: Build Android
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
@@ -43,126 +68,72 @@ jobs:
       - name: Get version from pubspec.yaml
         id: get_version
         run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            VERSION=$(powershell -Command "$line = Get-Content pubspec.yaml | Select-String '^version:'; if ($line) { $line.Line -replace 'version: ', '' | ForEach-Object { $_.Trim() } } else { Write-Output '1.0.0' }")
-          else
-            VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-            if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
-          fi
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
           VERSION=$(echo "$VERSION" | cut -d'+' -f1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
-        shell: bash
-      
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.41.7'
+          channel: stable
           cache: true
 
       - name: Install Java
-        if: matrix.name == 'android'
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 21
 
       - name: Setup Android SDK
-        if: matrix.name == 'android'
         uses: android-actions/setup-android@v3
 
-      - name: Cache Gradle
-        if: matrix.name == 'android'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Cache NDK
-        if: matrix.name == 'android'
-        id: cache-ndk
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
-            ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION_DEPS }}
-          key: ${{ runner.os }}-ndk-${{ env.NDK_VERSION }}-${{ env.NDK_VERSION_DEPS }}
-
-      - name: Install NDK
-        if: matrix.name == 'android' && steps.cache-ndk.outputs.cache-hit != 'true'
+      - name: Build Android
         run: |
-          echo "y" | sdkmanager --install "ndk;${{ env.NDK_VERSION }}"
-          echo "y" | sdkmanager --install "ndk;${{ env.NDK_VERSION_DEPS }}"
-          
-      - name: Build with build.sh
-        if: matrix.name != 'windows-amd64'
-        continue-on-error: true
-        run: |
-          chmod +x build.sh
-          ./build.sh ${{ matrix.build-args }}
-        shell: bash
-      
-      - name: Build on Windows
-        if: matrix.name == 'windows-amd64'
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          $version = "${{ steps.get_version.outputs.version }}"
-          Write-Host "Building version: $version" -ForegroundColor Green
           flutter pub get
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Write-Host "Building Windows..." -ForegroundColor Blue
-          flutter build windows --release
-          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "dist/selene-$version-windows-x64-portable.zip" -Force
-          Write-Host "Windows build complete" -ForegroundColor Green
-      
+          flutter build apk --release
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/selene-${{ steps.get_version.outputs.version }}-android.apk
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: dist/*
+
+  build-macos-ios:
+    runs-on: macos-latest
+    name: Build macOS iOS
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Get version from pubspec.yaml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
+          VERSION=$(echo "$VERSION" | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+          cache: true
+
+      - name: Build Apple
+        continue-on-error: true
+        run: |
+          flutter pub get
+          flutter build macos --release
+          flutter build ios --release --no-codesign
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: ${{ matrix.name }}-release-artifacts
-          path: dist/*
-
-  create-release:
-    needs: build
-    runs-on: ubuntu-latest
-    name: Create Release
-    if: startsWith(github.ref, 'refs/tags/')
-    env:
-      TZ: Asia/Shanghai
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: all-artifacts
-      
-      - name: Prepare release artifacts
-        run: |
-          mkdir -p release-files
-          find all-artifacts -type f -exec cp {} release-files/ \;
-          ls -lh release-files/
-      
-      - name: Get version from tag
-        id: tag_version
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Release version: $VERSION"
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.tag_version.outputs.version }}
-          name: Selene ${{ steps.tag_version.outputs.version }}
-          files: release-files/*
-          draft: false
-          prerelease: false
-          fail_on_unmatched_files: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: macos-ios-release
+          path: build/
