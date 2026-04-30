@@ -23,12 +23,17 @@ jobs:
       - name: 构建 Windows 正式版
         run: flutter build windows --release
 
-      # 上传到 Releases（自动带版本号）
-      - name: 上传安装包到 Release
+      # 把构建结果打包成一个 zip 文件
+      - name: 打包 Windows 安装包
+        run: |
+          cd build/windows/x64/runner/Release
+          tar -a -c -f ../../../../MengYaoTV2.0-Windows.zip *
+
+      - name: 上传到 Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/windows/x64/runner/Release/*
-          name: 梦瑶影视2.0 ${{ github.ref_name }}
+          files: MengYaoTV2.0-Windows.zip  # 只传这个压缩包
+          name: MengYaoTV2.0 ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
