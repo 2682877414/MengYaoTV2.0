@@ -32,16 +32,19 @@ jobs:
       - name: 配置 Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 生成签名文件
+      # 👇 关键：直接把签名文件放到它要找的位置
+      - name: 生成签名文件（按Gradle的路径放）
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > my_key.jks
+          mkdir -p android
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/my_key.jks
 
+      # 👇 key.properties 也按它的路径来写
       - name: 创建签名配置
         run: |
           echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=../my_key.jks" >> android/key.properties
+          echo "storeFile=my_key.jks" >> android/key.properties
 
       - name: 构建打包
         run: |
@@ -51,7 +54,7 @@ jobs:
           mkdir -p dist
           cp build/app/outputs/flutter-apk/*.apk dist/
 
-      - name: 上传构建产物
+      - name: 上传文件
         uses: actions/upload-artifact@v4
         with:
           name: 沐瑶影视-${{ steps.get_version.outputs.version }}
