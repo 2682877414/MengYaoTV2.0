@@ -38,12 +38,10 @@ jobs:
 
       - name: 创建签名配置
         run: |
-          cat > android/key.properties << EOF
-storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-storeFile=../my_key.jks
-EOF
+          echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=../my_key.jks" >> android/key.properties
 
       - name: 构建打包
         run: |
@@ -51,7 +49,6 @@ EOF
           flutter build apk --release --split-per-abi
           flutter build apk --release
           mkdir -p dist
-          VERSION=${{ steps.get_version.outputs.version }}
           cp build/app/outputs/flutter-apk/*.apk dist/
 
       - name: 上传构建产物
