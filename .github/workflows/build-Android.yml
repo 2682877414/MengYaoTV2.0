@@ -4,12 +4,12 @@ on: workflow_dispatch
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    name: Build Android
+    name: 构建安卓（已签名）
     steps:
-      - name: Clone repository
+      - name: 拉取代码仓库
         uses: actions/checkout@v4
 
-      - name: Get version from pubspec.yaml
+      - name: 读取版本号
         id: get_version
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
@@ -17,34 +17,34 @@ jobs:
           VERSION=$(echo "$VERSION" | cut -d'+' -f1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Setup Flutter
+      - name: 配置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.7'
           channel: stable
           cache: true
 
-      - name: Install Java
+      - name: 安装 Java 环境
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: 21
 
-      - name: Setup Android SDK
+      - name: 配置 Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Restore keystore
+      - name: 还原签名文件
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > my_key.jks
 
-      - name: Configure signing
+      - name: 配置签名信息
         run: |
           echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=../my_key.jks" >> android/key.properties
 
-      - name: Build Android
+      - name: 构建安卓安装包
         run: |
           flutter pub get
           flutter build apk --release --split-per-abi
@@ -53,13 +53,12 @@ jobs:
           mkdir -p dist
           VERSION=${{ steps.get_version.outputs.version }}
           
-          # 重命名所有APK，自动带上版本号
           cp build/app/outputs/flutter-apk/app-release.apk                  dist/沐瑶影视-$VERSION-全架构.apk
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk       dist/沐瑶影视-$VERSION-arm64-v8a.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk     dist/沐瑶影视-$VERSION-armeabi-v7a.apk
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk          dist/沐瑶影视-$VERSION-x86_64.apk
 
-      - name: Upload artifacts
+      - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: 沐瑶影视-${{ steps.get_version.outputs.version }}-安卓全签名包
