@@ -436,7 +436,7 @@ class _LivePlayerScreenState extends State<LivePlayerScreen>
                   // Windows 自定义标题栏
                   if (Platform.isWindows)
                     const WindowsTitleBar(
-                      customBackgroundColor: Color(0xFF000000),
+                      customBackgroundColor: Colors.white, // ✅ 白色标题栏
                     ),
                   // 主要内容
                   Expanded(
