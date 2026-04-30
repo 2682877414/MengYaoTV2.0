@@ -20,7 +20,11 @@ jobs:
       - run: flutter pub get
       - run: flutter build ios --release --no-codesign
 
-      - name: 打包 IPA
+      # 👇 构建完直接输出架构信息
+      - name: 查看架构
+        run: lipo -info build/ios/iphoneos/Runner.app/Runner
+
+      - name: 打包成 IPA
         run: |
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
