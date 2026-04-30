@@ -1,4 +1,4 @@
-name: iOS 单独构建
+name: 梦瑶影视 2.0 (iOS)
 on: workflow_dispatch
 
 jobs:
