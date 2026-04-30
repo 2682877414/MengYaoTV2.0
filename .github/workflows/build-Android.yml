@@ -31,19 +31,56 @@ jobs:
       - name: 配置 Android SDK
         uses: android-actions/setup-android@v3
 
-      # 👇 按报错里的路径，直接把签名文件放这里
-      - name: 生成签名文件（按Gradle写死的路径）
+      # 👇 签名文件直接放项目根目录
+      - name: 生成签名文件
         run: |
-          mkdir -p android/app
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/my_key.jks
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > my_key.jks
 
-      # 👇 让Gradle能读到签名配置
+      # 👇 key.properties 放在 android/ 目录，路径写对
       - name: 创建签名配置
         run: |
           echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=app/my_key.jks" >> android/key.properties
+          echo "storeFile=../my_key.jks" >> android/key.properties
+
+      # 👇 关键：强制修改 build.gradle，让它从 key.properties 读配置
+      - name: 修改 build.gradle 签名配置
+        run: |
+          cat > android/app/build.gradle << 'EOF'
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
+android {
+    namespace "com.example.selene"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.example.selene"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+}
+EOF
 
       - name: 构建打包
         run: |
