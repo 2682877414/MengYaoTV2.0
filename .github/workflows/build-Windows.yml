@@ -1,92 +1,77 @@
-# ==============================================
-# 脚本名称：梦瑶影视 Windows 自动构建发布
-# 功能：打标签 → 编译 → 打包ZIP → 上传到Release
-# 格式：标准 GitHub 官方脚本（你看到别人那种）
-# ==============================================
-name: 梦瑶影视 2.0 (Windows)
+# ==========================================================
+# 【永久版 - 梦瑶影视 Windows 自动发布脚本】
+# 作用：打标签(v2.0.0) → 自动编译 → 自动打包ZIP → 自动上传Release
+# 注意：永远使用这个脚本！永远带注释！永远不会空！
+# ==========================================================
+name: 梦瑶影视 2.0 (Windows 自动构建)
 
-# ==============================================
-# 触发条件：
-# 1. 推送 v 开头标签（如 v2.0.0）自动运行
-# 2. 支持手动点击运行
-# ==============================================
+# ==========================================================
+# 触发方式：
+# 1. 打 v 开头标签自动运行（v2.0.0 / v2.0.1）
+# 2. 也可以手动点运行
+# ==========================================================
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
 
-# ==============================================
-# 构建任务主体
-# ==============================================
+# ==========================================================
+# 执行任务
+# ==========================================================
 jobs:
   build:
-    # 运行环境：Windows（必须用这个才能编译Windows）
+    # 必须用 Windows 环境，否则不能编译 Windows 程序
     runs-on: windows-latest
 
     steps:
       # ==============================================
-      # 步骤 1：从 GitHub 拉取最新代码
+      # 步骤1：拉取 GitHub 上的最新代码
       # ==============================================
-      - name: 拉取代码
+      - name: 拉取项目代码
         uses: actions/checkout@v4
 
       # ==============================================
-      # 步骤 2：安装 Flutter 环境
+      # 步骤2：安装 Flutter 环境（固定版本不报错）
       # ==============================================
-      - name: 安装 Flutter
+      - name: 安装 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.7'
           channel: stable
 
       # ==============================================
-      # 步骤 3：安装项目依赖
+      # 步骤3：安装项目依赖（必须执行）
       # ==============================================
-      - name: 安装依赖
+      - name: 安装依赖插件
         run: flutter pub get
 
       # ==============================================
-      # 步骤 4：编译 Windows 正式版
-      # 输出：build/windows/x64/runner/Release
+      # 步骤4：编译 Windows 正式版
       # ==============================================
-      - name: 编译 Windows 正式版
+      - name: 编译 Windows 程序
         run: flutter build windows --release
 
       # ==============================================
-      # 步骤 5：打包成 ZIP 压缩包
+      # 步骤5：打包成 ZIP 压缩包
       # 生成文件：MengYaoTV-v2.0.0.zip
       # ==============================================
-      - name: 打包成 ZIP 压缩包
+      - name: 打包为 ZIP 压缩包
         run: |
           cd build/windows/x64/runner/Release
           Compress-Archive -Path * -DestinationPath ../../../../MengYaoTV-${{ github.ref_name }}.zip
 
       # ==============================================
-      # 步骤 6：创建 Release（官方标准步骤）
-      # 作用：生成一个新版本发布页
+      # 步骤6：上传 ZIP 到 Release（不会冲突、不会空）
       # ==============================================
-      - name: 创建 Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: 上传到 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # 上传的文件
+          files: MengYaoTV-${{ github.ref_name }}.zip
+          # 自动对应你打的标签版本
+          tag_name: ${{ github.ref_name }}
+          # 自动生成更新日志
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}          # 版本标签名
-          release_name: 梦瑶影视 ${{ github.ref_name }}  # Release标题
-          draft: false                              # 不是草稿
-          prerelease: false                         # 不是测试版
-
-      # ==============================================
-      # 步骤 7：上传 ZIP 到 Release（官方标准步骤）
-      # 你给别人看的那种命令，就是这一步！
-      # ==============================================
-      - name: 上传 ZIP 到 Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}  # 上传地址
-          asset_path: MengYaoTV-${{ github.ref_name }}.zip           # 本地文件路径
-          asset_name: MengYaoTV-${{ github.ref_name }}.zip           # 上传后的文件名
-          asset_content_type: application/zip                        # 文件类型（ZIP）
