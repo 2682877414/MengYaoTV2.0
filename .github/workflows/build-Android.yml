@@ -28,6 +28,12 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
 
+      # 👇 👇 👇 这里修复 NDK 许可证问题（真正的炸点）
+      - name: 同意 Android SDK 许可证
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.14033849"
+
       - name: 构建APK
         run: |
           flutter pub get
