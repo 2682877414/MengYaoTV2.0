@@ -114,13 +114,13 @@ class _AppWrapperState extends State<AppWrapper> {
         // 本地模式：尝试刷新订阅内容
         try {
           final subscriptionUrl =
-          await LocalModeStorageService.getSubscriptionUrl();
+              await LocalModeStorageService.getSubscriptionUrl();
           if (subscriptionUrl != null && subscriptionUrl.isNotEmpty) {
             final response = await http.get(Uri.parse(subscriptionUrl));
             if (response.statusCode == 200) {
               final content =
-              await SubscriptionService.parseSubscriptionContent(
-                  response.body);
+                  await SubscriptionService.parseSubscriptionContent(
+                      response.body);
               if (content != null) {
                 if (content.searchResources != null && content.searchResources!.isNotEmpty) {
                   await LocalModeStorageService.saveSearchSources(
