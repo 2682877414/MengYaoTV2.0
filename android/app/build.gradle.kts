@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "org.moontechlab.selene"
+    namespace = "com.muyan.mengyao2"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "29.0.14033849"
 
