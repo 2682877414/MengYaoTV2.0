@@ -4,43 +4,63 @@ on: workflow_dispatch
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    name: Build Android
     steps:
-      - uses: actions/checkout@v4
+      - name: Clone repository
+        uses: actions/checkout@v4
 
-      - name: 安装 Flutter
+      - name: Get version from pubspec.yaml
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
+          VERSION=$(echo "$VERSION" | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.41.7
+          flutter-version: '3.41.7'
+          channel: stable
+          cache: true
 
-      - name: 安装 Java
+      - name: Install Java
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
-          java-version: '21'
+          java-version: 21
 
-      - name: 自动获取版本号
-        run: |
-          VERSION=$(grep 'version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: 还原签名文件
+      - name: Restore keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > my_key.jks
 
-      - name: 配置安卓签名
+      - name: Configure signing
         run: |
-          echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > key.properties
-          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> key.properties
-          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> key.properties
-          echo "storeFile=my_key.jks" >> key.properties
+          echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=../my_key.jks" >> android/key.properties
 
-      - run: flutter pub get
+      - name: Build Android
+        run: |
+          flutter pub get
+          flutter build apk --release --split-per-abi
+          flutter build apk --release
+          
+          mkdir -p dist
+          VERSION=${{ steps.get_version.outputs.version }}
+          
+          # 重命名所有APK，自动带上版本号
+          cp build/app/outputs/flutter-apk/app-release.apk                  dist/沐瑶影视-$VERSION-全架构.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk       dist/沐瑶影视-$VERSION-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk     dist/沐瑶影视-$VERSION-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk          dist/沐瑶影视-$VERSION-x86_64.apk
 
-      - name: 构建安卓正式 APK
-        run: flutter build apk --release
-
-      - name: 上传 APK
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: 沐瑶影视${{ env.VERSION }}-安卓正式签名版
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: 沐瑶影视-${{ steps.get_version.outputs.version }}-安卓全签名包
+          path: dist/*.apk
