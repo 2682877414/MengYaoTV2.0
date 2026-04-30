@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - 'v*'  # 触发条件：当推送的标签以 'v' 开头时
-
+      
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -23,8 +23,12 @@ jobs:
       - name: 构建 Windows 正式版
         run: flutter build windows --release
 
-      - name: 上传安装包
-        uses: actions/upload-artifact@v4
+      # 上传到 Releases（自动带版本号）
+      - name: 上传安装包到 Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: 梦瑶影视2.0-Windows安装包-${{ github.ref_name }}
-          path: build/windows/x64/runner/Release/
+          files: build/windows/x64/runner/Release/*
+          name: 梦瑶影视2.0 ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
