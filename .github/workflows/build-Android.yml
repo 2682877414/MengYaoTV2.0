@@ -1,10 +1,10 @@
-name: Android 单独构建（终极安全签名 · 零泄露）
+name: Android 单独构建（正确签名·不闪退）
 on: workflow_dispatch
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    name: 构建安卓（已签名）
+    name: 构建安卓（已正确签名）
     steps:
       - name: 拉取代码仓库
         uses: actions/checkout@v4
@@ -28,10 +28,24 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
-          java-version: 21
+          java-version: '21'
 
       - name: 配置 Android SDK
         uses: android-actions/setup-android@v3
+
+      # ↓↓↓↓↓ 正确签名配置 绝对不炸 ↓↓↓↓↓
+      - name: 生成签名文件
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > my_key.jks
+
+      - name: 创建签名配置
+        run: |
+          cat > android/key.properties << EOF
+storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+storeFile=../my_key.jks
+EOF
 
       - name: 构建安卓安装包
         run: |
@@ -50,5 +64,5 @@ jobs:
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
-          name: 沐瑶影视-${{ steps.get_version.outputs.version }}-安卓全签名包
+          name: 沐瑶影视-${{ steps.get_version.outputs.version }}-安卓完整包
           path: dist/*.apk
