@@ -1,0 +1,192 @@
+# ==========================================
+# 梦瑶影视2.0 全平台自动构建脚本
+# 作用：打v*标签自动构建iOS/Android/Windows，支持手动触发
+# 输出文件：
+# - iOS: 梦瑶影视2.0-iOS-v2.0.0-未签名.ipa
+# - Android: 梦瑶影视2.0-Android-v2.0.0.apk（及各架构版本）
+# - Windows: 梦瑶影视2.0-Windows-v2.0.0.zip
+# ==========================================
+name: 梦瑶影视2.0 (全平台自动构建)
+
+# 触发条件
+# 1. 打 v* 标签自动构建
+# 2. 支持手动触发构建
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  # iOS 构建任务
+  build-ios:
+    runs-on: macos-latest  # iOS 必须用 macOS 环境
+    steps:
+      # 1. 拉取项目代码
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      # 2. 安装 Flutter 3.41.7
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.7
+
+      # 3. 读取标签版本号
+      - name: 读取标签版本号
+        run: |
+          TAG_NAME=${{ github.ref_name }}
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+      # 4. 安装项目依赖
+      - name: 安装依赖
+        run: flutter pub get
+
+      # 5. 构建 iOS 正式包（不签名）
+      - name: 构建未签名 iOS 包
+        run: flutter build ios --release --no-codesign
+
+      # 6. 查看包架构信息（调试用）
+      - name: 查看架构
+        run: lipo -info build/ios/iphoneos/Runner.app/Runner
+
+      # 7. 打包成 IPA 文件
+      - name: 打包 IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r "梦瑶影视2.0-iOS-${{ env.TAG_NAME }}-未签名.ipa" Payload/
+
+      # 8. 上传 IPA 到 GitHub Releases
+      - name: 上传iOS产物到Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: 梦瑶影视2.0-iOS-${{ env.TAG_NAME }}-未签名.ipa
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Android 构建任务
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 读取标签版本号
+        run: |
+          TAG_NAME=${{ github.ref_name }}
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+      - name: 配置 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+
+      - name: 安装 Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      # 恢复签名文件
+      - name: 恢复签名文件
+        run: |
+          echo "${{ secrets.ENCODED_KEYSTORE }}" | base64 -d > android/app/release-key.jks
+
+      # 生成签名配置
+      - name: 生成签名配置
+        run: |
+          cat > android/key.properties << EOF
+          storeFile=release-key.jks
+          storePassword=${{ secrets.KEY_STORE_PASSWORD }}
+          keyAlias=release_key
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: 清理并安装依赖
+        run: |
+          flutter clean
+          flutter pub get
+
+      - name: 同意许可
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+
+      - name: 构建通用APK
+        run: flutter build apk --release
+
+      - name: 构建架构APK
+        run: flutter build apk --release --split-per-abi
+
+      - name: 重命名APK文件
+        run: |
+          TAG=${{ env.TAG_NAME }}
+          DIR=build/app/outputs/flutter-apk
+          mv $DIR/app-release.apk          "梦瑶影视2.0-Android-$TAG.apk"
+          mv $DIR/app-arm64-v8a-release.apk "梦瑶影视2.0-Android-arm64-v8a-$TAG.apk"
+          mv $DIR/app-armeabi-v7a-release.apk "梦瑶影视2.0-Android-armeabi-v7a-$TAG.apk"
+          mv $DIR/app-x86_64-release.apk    "梦瑶影视2.0-Android-x86_64-$TAG.apk"
+
+      - name: 上传Android产物到Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            梦瑶影视2.0-Android-${{ env.TAG_NAME }}.apk
+            梦瑶影视2.0-Android-arm64-v8a-${{ env.TAG_NAME }}.apk
+            梦瑶影视2.0-Android-armeabi-v7a-${{ env.TAG_NAME }}.apk
+            梦瑶影视2.0-Android-x86_64-${{ env.TAG_NAME }}.apk
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Windows 构建任务
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      # 1. 拉取项目代码
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      # 2. 安装 Flutter 环境
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+
+      # 3. 安装项目依赖
+      - name: 安装依赖
+        run: flutter pub get
+
+      # 4. 编译 Windows 正式版程序
+      - name: 编译 Windows 正式版
+        run: flutter build windows --release
+
+      # 5. 打包成 ZIP 压缩包（系统原生命令）
+      - name: 打包成 ZIP 压缩包
+        run: |
+          $zipName = "梦瑶影视2.0-Windows-${{ github.ref_name }}.zip"
+          $sourceDir = "build\windows\x64\runner\Release"
+          Compress-Archive -Path "$sourceDir\*" -DestinationPath $zipName -Force
+
+      # 6. 验证压缩包是否生成
+      - name: 验证压缩包文件
+        run: |
+          $zipName = "梦瑶影视2.0-Windows-${{ github.ref_name }}.zip"
+          if (Test-Path $zipName) {
+            Write-Host "✅ 压缩包生成成功：$zipName"
+          } else {
+            Write-Error "❌ 压缩包生成失败！"
+            exit 1
+          }
+
+      # 7. 上传到 GitHub Release
+      - name: 上传Windows产物到Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: 梦瑶影视2.0-Windows-${{ github.ref_name }}.zip
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
