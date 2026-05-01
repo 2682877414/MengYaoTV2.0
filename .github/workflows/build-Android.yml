@@ -51,7 +51,7 @@ jobs:
           cat > android/key.properties << EOF
           storeFile=release-key.jks
           storePassword=${{ secrets.KEY_STORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyAlias=release_key
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
 
