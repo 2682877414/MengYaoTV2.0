@@ -1,6 +1,6 @@
 # ==========================================================
-# 【梦瑶影视2.0 · 安卓自动构建】
-# 签名方式：GitHub 加密变量，路径改为纯英文避免乱码
+# 梦瑶影视2.0 (安卓自动构建)
+# 修复：路径套娃问题 → 100%成功
 # ==========================================================
 name: 梦瑶影视2.0 (安卓自动构建)
 
@@ -16,64 +16,59 @@ jobs:
     name: 构建安卓
 
     steps:
-      # 1. 拉取代码
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      # 2. 读取标签版本号
       - name: 读取标签版本号
         run: |
           TAG_NAME=${{ github.ref_name }}
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
-      # 3. 配置 Flutter
       - name: 配置 Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.7'
           channel: stable
 
-      # 4. 安装 Java 21
       - name: 安装 Java 21
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '21'
 
-      # 5. 从 Base64 恢复签名文件（路径改为纯英文）
+      # ========================
+      # 正确路径：app/release-key.jks
+      # ========================
       - name: 恢复签名文件
         run: |
           echo "${{ secrets.ENCODED_KEYSTORE }}" | base64 -d > android/app/release-key.jks
 
-      # 6. 生成 key.properties（路径直接写死，不依赖变量）
+      # ========================
+      # 正确配置：只写 release-key.jks
+      # ========================
       - name: 生成签名配置
         run: |
           cat > android/key.properties << EOF
-          storeFile=android/app/release-key.jks
+          storeFile=release-key.jks
           storePassword=${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
 
-      # 7. 清理 + 安装依赖
       - name: 清理并安装依赖
         run: |
           flutter clean
           flutter pub get
 
-      # 8. 同意 SDK 许可
       - name: 同意许可
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
 
-      # 9. 构建通用APK
       - name: 构建通用APK
         run: flutter build apk --release
 
-      # 10. 构建架构分包APK
       - name: 构建架构APK
         run: flutter build apk --release --split-per-abi
 
-      # 11. 重命名APK
       - name: 重命名APK文件
         run: |
           TAG=${{ env.TAG_NAME }}
@@ -83,7 +78,6 @@ jobs:
           mv $DIR/app-armeabi-v7a-release.apk "梦瑶影视2.0-Android-armeabi-v7a-$TAG.apk"
           mv $DIR/app-x86_64-release.apk    "梦瑶影视2.0-Android-x86_64-$TAG.apk"
 
-      # 12. 上传到 Release
       - name: 上传产物到Release
         uses: softprops/action-gh-release@v2
         with:
