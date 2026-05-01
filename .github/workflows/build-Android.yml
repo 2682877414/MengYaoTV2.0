@@ -1,14 +1,14 @@
 # ==========================================================
-# 【安卓最终版】一次打出 4 个安装包
-# 包含：
-# 1. 通用全包（所有手机都能用）
-# 2. armeabi-v7a（老手机）
-# 3. arm64-v8a（新手机 95%）
-# 4. x86_64（平板/模拟器）
+# 【安卓永久版】一次构建 4 个包 · 命名和Windows完全统一
+# 输出文件：
+# MengYaoTV-Android-v2.0.0.apk                  → 通用全包
+# MengYaoTV-Android-arm64-v8a-v2.0.0.apk       → 新手机
+# MengYaoTV-Android-armeabi-v7a-v2.0.0.apk     → 老手机
+# MengYaoTV-Android-x86_64-v2.0.0.apk          → 平板/模拟器
 # ==========================================================
-name: 梦瑶影视 2.0 (安卓4合1构建)
+name: 梦瑶影视 2.0 (安卓构建)
 
-# 触发方式：打 v 开头标签自动运行
+# 打 v 标签自动构建
 on:
   push:
     tags:
@@ -35,7 +35,7 @@ jobs:
           channel: stable
 
       # ==========================
-      # 3. 安装依赖
+      # 3. 安装项目依赖
       # ==========================
       - name: 安装依赖
         run: flutter pub get
@@ -47,22 +47,35 @@ jobs:
         run: flutter build apk --release
 
       # ==========================
-      # 5. 构建 3个CPU分包
+      # 5. 构建 3个CPU架构分包
       # ==========================
       - name: 构建架构分包APK
         run: flutter build apk --release --split-per-abi
 
       # ==========================
-      # 6. 上传全部 4 个APK
+      # 6. 重命名为统一格式
       # ==========================
-      - name: 上传全部安卓包到Release
+      - name: 重命名APK文件
+        run: |
+          VERSION=${{ github.ref_name }}
+          DIR=build/app/outputs/flutter-apk
+
+          mv $DIR/app-release.apk                  MengYaoTV-Android-$VERSION.apk
+          mv $DIR/app-arm64-v8a-release.apk         MengYaoTV-Android-arm64-v8a-$VERSION.apk
+          mv $DIR/app-armeabi-v7a-release.apk       MengYaoTV-Android-armeabi-v7a-$VERSION.apk
+          mv $DIR/app-x86_64-release.apk            MengYaoTV-Android-x86_64-$VERSION.apk
+
+      # ==========================
+      # 7. 上传全部4个APK
+      # ==========================
+      - name: 上传APK到Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-x86_64-release.apk
+            MengYaoTV-Android-${{ github.ref_name }}.apk
+            MengYaoTV-Android-arm64-v8a-${{ github.ref_name }}.apk
+            MengYaoTV-Android-armeabi-v7a-${{ github.ref_name }}.apk
+            MengYaoTV-Android-x86_64-${{ github.ref_name }}.apk
           tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
