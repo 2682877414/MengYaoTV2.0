@@ -25,47 +25,61 @@ jobs:
         uses: actions/checkout@v4
 
       # ==============================================
-      # 步骤2：安装 Flutter 开发环境
+      # 步骤2：安装 Java 17（安卓构建必需，修复失败）
+      # ==============================================
+      - name: 安装Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ==============================================
+      # 步骤3：安装 Flutter 开发环境
       # ==============================================
       - name: 安装 Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.7'
+          flutter-version: '3.22.3'
           channel: stable
 
       # ==============================================
-      # 步骤3：安装项目依赖
+      # 步骤4：同意Android SDK许可证（修复报错）
+      # ==============================================
+      - name: 同意安卓许可证
+        run: flutter doctor --android-licenses || true
+
+      # ==============================================
+      # 步骤5：安装项目依赖
       # ==============================================
       - name: 安装依赖
         run: flutter pub get
 
       # ==============================================
-      # 步骤4：构建安卓通用APK（全包）
+      # 步骤6：构建安卓通用APK（全包）
       # ==============================================
       - name: 构建通用APK
         run: flutter build apk --release
 
       # ==============================================
-      # 步骤5：构建安卓架构分包
+      # 步骤7：构建安卓架构分包
       # ==============================================
       - name: 构建架构分包APK
         run: flutter build apk --release --split-per-abi
 
       # ==============================================
-      # 步骤6：重命名为中文名称
+      # 步骤8：重命名为中文名称
       # ==============================================
       - name: 重命名APK文件
         run: |
           VERSION=${{ github.ref_name }}
           DIR=build/app/outputs/flutter-apk
-
           mv $DIR/app-release.apk                  "梦瑶影视2.0-Android-$VERSION.apk"
           mv $DIR/app-arm64-v8a-release.apk         "梦瑶影视2.0-Android-arm64-v8a-$VERSION.apk"
           mv $DIR/app-armeabi-v7a-release.apk       "梦瑶影视2.0-Android-armeabi-v7a-$VERSION.apk"
           mv $DIR/app-x86_64-release.apk            "梦瑶影视2.0-Android-x86_64-$VERSION.apk"
 
       # ==============================================
-      # 步骤7：上传全部APK
+      # 步骤9：上传全部APK
       # ==============================================
       - name: 上传APK到发布页
         uses: softprops/action-gh-release@v2
