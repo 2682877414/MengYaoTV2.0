@@ -1,10 +1,10 @@
 # ==========================================================
-# 【永久版 · 全注释 · 绝对出包】梦瑶影视 Windows 构建脚本
-# 功能：打标签 → 编译 → 打包ZIP → 上传Release
-# 格式绝对正确！不会丢命令！
+# 【最终版 · 全注释 · 原生打包】梦瑶影视 Windows 构建脚本
+# 特点：不依赖 7z，使用系统自带命令，永远不会打包失败
 # ==========================================================
 name: 梦瑶影视 2.0 (Windows 自动构建)
 
+# 触发条件：打 v 开头标签自动运行
 on:
   push:
     tags:
@@ -14,32 +14,69 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
+      # ==============================================
+      # 步骤1：拉取项目代码
+      # ==============================================
       - name: 拉取代码
         uses: actions/checkout@v4
 
+      # ==============================================
+      # 步骤2：安装 Flutter 环境
+      # ==============================================
       - name: 安装 Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.7'
           channel: stable
 
+      # ==============================================
+      # 步骤3：安装项目依赖
+      # ==============================================
       - name: 安装依赖
         run: flutter pub get
 
+      # ==============================================
+      # 步骤4：编译 Windows 正式版程序
+      # ==============================================
       - name: 编译 Windows 正式版
         run: flutter build windows --release
 
-      - name: 打包成 ZIP 压缩包（100%执行）
-        run: 7z a MengYaoTV-${{ github.ref_name }}.zip ./build/windows/x64/runner/Release/*
+      # ==============================================
+      # 步骤5：【原生打包】使用系统自带的压缩命令
+      # 不依赖 7z，绝对不会因为找不到命令而失败
+      # ==============================================
+      - name: 打包成 ZIP 压缩包（原生命令）
+        run: |
+          # 定义压缩包文件名
+          $zipName = "MengYaoTV-${{ github.ref_name }}.zip"
+          # 定义要打包的目录
+          $sourceDir = "build\windows\x64\runner\Release"
+          # 使用系统自带的 Compress-Archive 命令打包
+          Compress-Archive -Path "$sourceDir\*" -DestinationPath $zipName -Force
 
-      - name: 查看生成的文件
-        run: dir
+      # ==============================================
+      # 步骤6：验证压缩包是否生成
+      # ==============================================
+      - name: 验证压缩包文件
+        run: |
+          $zipName = "MengYaoTV-${{ github.ref_name }}.zip"
+          if (Test-Path $zipName) {
+            Write-Host "✅ 压缩包生成成功：$zipName"
+          } else {
+            Write-Error "❌ 压缩包生成失败！"
+            exit 1
+          }
 
-      - name: 上传到 GitHub Release
+      # ==============================================
+      # 步骤7：上传到 GitHub Release
+      # ==============================================
+      - name: 上传到 Release
         uses: softprops/action-gh-release@v2
         with:
           files: MengYaoTV-${{ github.ref_name }}.zip
           tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
