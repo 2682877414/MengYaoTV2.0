@@ -1,6 +1,7 @@
 # ==========================================
 # 梦瑶影视 iOS 自动构建（未签名包）
 # 无需证书 → 构建后自己签名安装
+# 自动上传到 Releases
 # ==========================================
 name: 梦瑶影视2.0 (iOS自动构建)
 
@@ -40,10 +41,16 @@ jobs:
         run: |
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
-          zip -r "梦瑶影视-${{ env.VERSION }}-iOS-未签名.ipa" Payload/
+          zip -r "梦瑶影视2.0-iOS-${{ env.VERSION }}-未签名.ipa" Payload/
 
-      - name: 上传产物
-        uses: actions/upload-artifact@v4
+      # ==========================================
+      # 🔥 这里是我帮你加上传 Release 的步骤
+      # ==========================================
+      - name: 上传到 Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: 梦瑶影视-${{ env.VERSION }}-iOS-未签名
-          path: "梦瑶影视-${{ env.VERSION }}-iOS-未签名.ipa"
+          files: |
+            梦瑶影视2.0-iOS-${{ env.VERSION }}-未签名.ipa
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
