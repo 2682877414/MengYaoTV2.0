@@ -1,89 +1,66 @@
 # ==========================================
-# 【梦瑶影视2.0 - iOS自动构建（未签名版）】
-# 功能：构建未签名iOS包，自动上传到Releases
-# 特点：无需开发者证书，构建后可自行签名安装
-# 触发方式：打v开头的标签 / 手动触发
+# 梦瑶影视2.0 (iOS自动构建 · 未签名包)
+# 作用：打标签自动构建 iOS · 自动上传 Releases
+# 输出文件名：梦瑶影视2.0-iOS-v2.0.0-未签名.ipa
 # ==========================================
 name: 梦瑶影视2.0 (iOS自动构建)
 
-# 触发规则：打v开头的标签自动构建，也支持手动触发
+# 触发条件
+# 1. 打 v* 标签（如 v2.0.0）自动构建
+# 2. 支持手动触发构建
 on:
   push:
     tags:
-      - 'v*'  # 比如v1.0.0、v2.0.1这类标签
+      - 'v*'
   workflow_dispatch:
 
 jobs:
   build-ios:
-    runs-on: macos-latest  # iOS构建必须用macOS环境
+    runs-on: macos-latest  # iOS 必须用 macOS 环境
     steps:
-      # ==========================================
-      # 步骤1：拉取你的项目代码到构建环境
-      # ==========================================
+      # 1. 拉取项目代码
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      # ==========================================
-      # 步骤2：安装指定版本的Flutter环境
-      # 版本和你本地开发的保持一致：3.41.7
-      # ==========================================
+      # 2. 安装 Flutter 3.41.7
       - name: 安装 Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.41.7
 
-      # ==========================================
-      # 步骤3：读取项目的版本号
-      # 从pubspec.yaml里提取版本号，存到环境变量里，后面命名文件用
-      # ==========================================
-      - name: 读取版本号
+      # 3. 读取标签版本号（例如 v2.0.0）
+      # 直接用 GitHub 标签名，保证文件名统一带 v
+      - name: 读取标签版本号
         run: |
-          VERSION=$(cat pubspec.yaml | grep "^version:" | awk '{print $2}' | cut -d'+' -f1)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          TAG_NAME=${{ github.ref_name }}
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
-      # ==========================================
-      # 步骤4：安装项目依赖包
-      # 确保所有第三方库都下载完整，避免构建失败
-      # ==========================================
+      # 4. 安装项目依赖
       - name: 安装依赖
         run: flutter pub get
 
-      # ==========================================
-      # 步骤5：构建未签名的iOS包
-      # --release：构建正式版
-      # --no-codesign：跳过签名，生成未签名的包
-      # ==========================================
+      # 5. 构建 iOS 正式包（不签名）
       - name: 构建未签名 iOS 包
         run: flutter build ios --release --no-codesign
 
-      # ==========================================
-      # 步骤6：查看构建包的架构信息（调试用）
-      # 确认生成的是arm64架构，适配iOS设备
-      # ==========================================
+      # 6. 查看包架构信息（调试用，可忽略）
       - name: 查看架构
         run: lipo -info build/ios/iphoneos/Runner.app/Runner
 
-      # ==========================================
-      # 步骤7：打包成标准IPA格式
-      # iOS安装包必须是Payload目录下的.app打包成zip，后缀改为.ipa
-      # 同时把文件名改成统一格式：梦瑶影视2.0-iOS-版本号-未签名.ipa
-      # ==========================================
+      # 7. 打包成 IPA 文件
+      # 文件名格式：梦瑶影视2.0-iOS-v2.0.0-未签名.ipa
       - name: 打包 IPA
         run: |
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
-          zip -r "梦瑶影视2.0-iOS-${{ env.VERSION }}-未签名.ipa" Payload/
+          zip -r "梦瑶影视2.0-iOS-${{ env.TAG_NAME }}-未签名.ipa" Payload/
 
-      # ==========================================
-      # 步骤8：上传IPA到GitHub Releases
-      # 把打包好的IPA文件，自动附加到当前标签的Release里
-      # 和你安卓构建的APK一起显示在发布页面
-      # ==========================================
+      # 8. 上传 IPA 到 GitHub Releases
       - name: 上传到 Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            梦瑶影视2.0-iOS-${{ env.VERSION }}-未签名.ipa
+            梦瑶影视2.0-iOS-${{ env.TAG_NAME }}-未签名.ipa
           tag_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
