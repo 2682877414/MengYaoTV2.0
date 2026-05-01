@@ -1,59 +1,72 @@
 # ==========================================================
-# 梦瑶影视 iOS 自动构建（未签名包）
-# 功能：自动编译未签名 iOS 安装包，无需证书
+# 工作流名称：梦瑶影视2.0 (iOS自动构建)
+# 功能：编译 Flutter iOS 未签名 IPA
+# 特点：--no-codesign 不自动签名，打包后自己手动签名安装
+# 触发方式：打v*标签自动触发 / 网页手动触发
 # ==========================================================
 name: 梦瑶影视2.0 (iOS自动构建)
 
+# 配置工作流触发条件
 on: 
+  # 推送 v 开头标签时自动构建
   push:
     tags:
       - 'v*'
+  # 支持网页手动点击运行
   workflow_dispatch
 
+# 构建任务
 jobs:
   build-ios:
+    # iOS 编译必须使用 MacOS 运行环境
     runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: 安装 Flutter
+    steps:
+      # 步骤1：拉取仓库源码到运行环境
+      - name: 拉取项目代码
+        uses: actions/checkout@v4
+
+      # 步骤2：安装指定版本 Flutter
+      - name: 配置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
           flutter-version: 3.41.7
 
-      # ==============================================
-      # ✅ 【绝对不会出错】版本号读取
-      # ==============================================
-      - name: 获取版本号
+      # 步骤3：稳定读取 pubspec.yaml 版本号
+      # 只取 2.0.0 舍弃后面 +构建号
+      - name: 读取项目版本号
         run: |
-          VERSION=`cat pubspec.yaml | grep -E '^version:' | sed 's/version: //g' | cut -d'+' -f1`
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "读取到版本号：$VERSION"
+          echo "当前读取到版本：$VERSION"
 
-      - run: flutter pub get
+      # 步骤4：拉取项目所有依赖包
+      - name: 安装项目依赖
+        run: flutter pub get
 
-      # ==============================================
-      # ✅ 构建未签名 iOS 包
-      # ==============================================
-      - run: flutter build ios --release --no-codesign
+      # 步骤5：编译 iOS 正式包
+      # --release 正式发行模式
+      # --no-codesign 关键：不进行系统签名，输出未签名包
+      - name: 编译iOS未签名正式包
+        run: flutter build ios --release --no-codesign
 
-      - name: 查看架构
+      # 步骤6：查看APP架构，确认编译正常
+      - name: 查看APP架构信息
         run: lipo -info build/ios/iphoneos/Runner.app/Runner
 
-      # ==============================================
-      # ✅ 打包 IPA
-      # ==============================================
-      - name: 打包成 IPA
+      # 步骤7：按iOS标准结构打包为IPA
+      # 必须放在 Payload 目录再压缩才能识别
+      - name: 打包为IPA安装包
         run: |
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r "梦瑶影视-${{ env.VERSION }}-iOS-未签名.ipa" Payload/
 
-      # ==============================================
-      # ✅ 上传产物
-      # ==============================================
-      - name: 上传产物
+      # 步骤8：上传IPA到构建产物，可直接下载
+      - name: 上传IPA安装包
         uses: actions/upload-artifact@v4
         with:
+          # 产物名称
           name: 梦瑶影视-${{ env.VERSION }}-iOS-未签名
+          # 要上传的文件路径
           path: "梦瑶影视-${{ env.VERSION }}-iOS-未签名.ipa"
