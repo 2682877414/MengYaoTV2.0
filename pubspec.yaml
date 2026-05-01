@@ -1,5 +1,5 @@
-name: selene
-description: "A MoonTV-based Video Player."
+name: mengyao_video_2
+description: "梦瑶影视2.0 - 一款好用的影视播放APP."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -78,7 +78,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -125,7 +125,7 @@ flutter:
 
 # 应用图标配置
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: true
   image_path: "logo.png"
   remove_alpha_ios: true  # 移除 iOS 图标的 alpha 通道
