@@ -969,7 +969,7 @@ class _UserMenuState extends State<UserMenu> {
                       child: GestureDetector(
                         onTap: () async {
                           final url = Uri.parse(
-                              'https://github.com/MoonTechLab/Selene');
+                              'https://github.com/2682877414/MengYaoTV2.0');
                           if (await canLaunchUrl(url)) {
                             await launchUrl(url,
                                 mode: LaunchMode.externalApplication);
