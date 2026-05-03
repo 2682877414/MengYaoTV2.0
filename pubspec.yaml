@@ -32,11 +32,11 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
-  
+
   # 添加用于创建美观UI的依赖
   google_fonts: ^8.1.0
   flutter_svg: ^2.0.10+1
@@ -67,6 +67,10 @@ dependencies:
   xml: ^6.5.0
   intl: ^0.20.2
   pip: ^0.0.3
+  # 权限申请（Android/iOS 读写权限）
+  # permission_handler: ^11.1.0
+  # 打开文件（下载完成后打开）
+  open_file: ^3.3.2
 
 dev_dependencies:
   flutter_test:
@@ -91,6 +95,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   generate: true
+
+  # 在这里加！！！
+  assets:
+    - assets/ffmpeg/ffmpeg.exe
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -23,6 +23,9 @@ import '../widgets/player_episodes_panel.dart';
 import '../widgets/player_sources_panel.dart';
 import '../widgets/windows_title_bar.dart';
 
+import '../utils/download_manager.dart';
+import '../widgets/download_episode_sheet.dart';
+
 class PlayerScreen extends StatefulWidget {
   final String? source;
   final String? id;
@@ -1235,6 +1238,63 @@ class _PlayerScreenState extends State<PlayerScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+
+                  // ========== 下载按钮（100% 匹配你的项目） ==========
+                  GestureDetector(
+                    onTap: () {
+                      if (currentDetail == null || currentDetail!.episodes.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("暂无视频可下载")),
+                        );
+                        return;
+                      }
+
+                      List<String> episodeNames = [];
+                      for (int i = 0; i < currentDetail!.episodes.length; i++) {
+                        episodeNames.add("第${i + 1}集");
+                      }
+
+                      DownloadManager.instance.setContext(context);
+
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                        builder: (context) => DownloadEpisodeSheet(
+                          dramaName: currentDetail!.title,
+                          episodes: episodeNames,
+                          urls: currentDetail!.episodes,
+                          onDownload: (selectedUrls) {
+                            // ✅ 这里完全匹配你的 DownloadManager
+                            List<DownloadTask> tasks = [];
+                            for (var url in selectedUrls) {
+                              int index = currentDetail!.episodes.indexOf(url);
+                              tasks.add(DownloadTask(
+                                dramaName: currentDetail!.title,
+                                episodeName: episodeNames[index],
+                                url: url,
+                              ));
+                            }
+                            DownloadManager.instance.addTasks(tasks);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("✅ 已加入下载队列")),
+                            );
+                            Navigator.pop(context);
+                          },
+                        ),
+                      );
+                    },
+                    child: Icon(
+                      Icons.download_outlined,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                      size: 28,
+                    ),
+                  ),
+// ==================================================
+
                   const SizedBox(width: 12),
                   GestureDetector(
                     onTap: _toggleFavorite,
