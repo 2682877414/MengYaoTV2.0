@@ -13,9 +13,13 @@ import 'dart:io' show Platform;
 import 'package:macos_window_utils/macos_window_utils.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'utils/download_manager.dart'; // <-- 加这个
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化下载管理器（读取已下载记录）
+  await DownloadManager.instance.init(); // <-- 就加这一行！！！
 
   // 初始化 media_kit (用于 PC 端播放器)
   MediaKit.ensureInitialized();

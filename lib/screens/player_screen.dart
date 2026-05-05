@@ -1253,21 +1253,31 @@ class _PlayerScreenState extends State<PlayerScreen>
                   ),
 
                   // ========== 下载按钮（100% 匹配你的项目） ==========
+                  // ========== 下载按钮（已加控制台日志） ==========
                   GestureDetector(
                     onTap: () {
+                      // 📝 日志：点击下载按钮
+                      debugPrint("[下载] 点击了下载按钮");
+
                       if (currentDetail == null || currentDetail!.episodes.isEmpty) {
+                        debugPrint("[下载] 暂无视频可下载 -> 剧集列表为空");
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("暂无视频可下载")),
                         );
                         return;
                       }
 
+                      // 📝 日志：获取剧集信息
+                      debugPrint("[下载] 总集数：${currentDetail!.episodes.length}");
+
                       List<String> episodeNames = [];
                       for (int i = 0; i < currentDetail!.episodes.length; i++) {
                         episodeNames.add("第${i + 1}集");
                       }
+                      debugPrint("[下载] 剧集名称生成完成：$episodeNames");
 
                       DownloadManager.instance.setContext(context);
+                      debugPrint("[下载] 已设置 context，准备打开下载弹窗");
 
                       showModalBottomSheet(
                         context: context,
@@ -1280,17 +1290,30 @@ class _PlayerScreenState extends State<PlayerScreen>
                           episodes: episodeNames,
                           urls: currentDetail!.episodes,
                           onDownload: (selectedUrls) {
-                            // ✅ 这里完全匹配你的 DownloadManager
+                            // 📝 日志：用户选择了要下载的集数
+                            debugPrint("[下载] 用户选择下载 ${selectedUrls.length} 个视频");
+                            debugPrint("[下载] 选中的链接：$selectedUrls");
+
                             List<DownloadTask> tasks = [];
                             for (var url in selectedUrls) {
                               int index = currentDetail!.episodes.indexOf(url);
-                              tasks.add(DownloadTask(
+                              var task = DownloadTask(
                                 dramaName: currentDetail!.title,
                                 episodeName: episodeNames[index],
                                 url: url,
-                              ));
+                              );
+                              tasks.add(task);
+
+                              // 📝 日志：每一集的任务
+                              debugPrint("[下载] 构建任务 -> ${episodeNames[index]} | $url");
                             }
+
+                            // 📝 日志：加入队列
+                            debugPrint("[下载] 所有任务构建完成，共 ${tasks.length} 个，即将加入下载队列");
+
                             DownloadManager.instance.addTasks(tasks);
+
+                            debugPrint("[下载] ✅ 已成功加入下载队列！");
 
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("✅ 已加入下载队列")),
@@ -1306,6 +1329,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       size: 28,
                     ),
                   ),
+// ========== 下载按钮结束=============================
 // ==================================================
 
                   const SizedBox(width: 12),

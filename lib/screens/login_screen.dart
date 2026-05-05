@@ -10,6 +10,8 @@ import '../utils/device_utils.dart';
 import '../utils/font_utils.dart';
 import '../widgets/windows_title_bar.dart';
 import 'home_screen.dart';
+// ====================== 👇 离线界面 ======================
+import 'download_center_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -268,6 +270,29 @@ class _LoginScreenState extends State<LoginScreen> {
               fontSize: 16,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
+            ),
+          ),
+        ),
+        // ====================== 👇 在这里加我给你的代码 ======================
+        // 👇 就是加在这里！（离线模式按钮）
+        const SizedBox(height: 20),
+        Center(
+          child: TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DownloadCenterScreen(),
+                ),
+              );
+            },
+            child: const Text(
+              "📁 离线模式（查看已下载）",
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF2c3e50),
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
         ),

@@ -29,7 +29,6 @@ class _LocalVideoPlayerScreenState extends State<LocalVideoPlayerScreen> {
     super.initState();
     player = Player();
     controller = VideoController(player);
-    // 直接加载本地文件
     player.open(Media(widget.filePath));
   }
 
@@ -97,7 +96,6 @@ class _DownloadDramaDetailScreenState extends State<DownloadDramaDetailScreen> {
             title: Text(task.episodeName),
             subtitle: const Text("已下载 → 点击播放"),
             onTap: () {
-              // 1. 检查文件是否存在
               if (task.savePath == null || !File(task.savePath!).existsSync()) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("文件不存在或已删除")),
@@ -105,13 +103,12 @@ class _DownloadDramaDetailScreenState extends State<DownloadDramaDetailScreen> {
                 return;
               }
 
-              // 2. 跳转到纯本地播放器，不调用PlayerScreen
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => LocalVideoPlayerScreen(
                     filePath: task.savePath!,
-                    title: task.title,
+                    title: task.episodeName,
                   ),
                 ),
               );
@@ -135,7 +132,7 @@ class _DownloadDramaDetailScreenState extends State<DownloadDramaDetailScreen> {
                           await _downloadManager.deleteTask(task);
                           setState(() {});
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("已删除：${task.title}")),
+                            SnackBar(content: Text("已删除：${task.episodeName}")),
                           );
                         },
                         child: const Text("删除", style: TextStyle(color: Colors.red)),
