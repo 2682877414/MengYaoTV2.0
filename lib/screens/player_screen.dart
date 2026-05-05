@@ -416,6 +416,18 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   // 处理返回按钮点击
   void _onBackPressed() async {
+    // 🔥 不管有没有播放器，直接先把页面退出逻辑挡住
+    if (!mounted) return;
+
+    // 🔥 【真正安全】有就销毁，没有就跳过
+    try {
+      if (_videoPlayerController != null) {
+        _videoPlayerController!.pause();
+        _videoPlayerController!.dispose();
+        _videoPlayerController = null;
+      }
+    } catch (e) {}
+
     // 如果正在投屏，停止投屏
     if (_isCasting && _dlnaDevice != null) {
       try {
@@ -744,6 +756,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   /// 视频播放进度更新回调
   void _onVideoProgressUpdate() {
+    if (!mounted) return; // <-- 就加在这里！！！
     // 检查并保存进度（基于时间间隔）
     _checkAndSaveProgress();
   }
@@ -2618,6 +2631,15 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
+    // 标记页面已销毁，防止异步回调继续执行
+    _isInitialized = false;
+
+    // 🔥 【绝杀】先强制断开关联，防止纹理二次释放
+    try {
+      _videoPlayerController?.pause();
+      _videoPlayerController = null; // 立刻切断所有引用，让系统知道没人再碰它
+    } catch (e) {}
+
     // 保存进度
     _saveProgress(force: true, scene: '页面销毁');
     // 移除视频进度监听器
@@ -2629,7 +2651,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     // 恢复原始的系统UI样式
     SystemChrome.setSystemUIOverlayStyle(_originalStyle);
     // 销毁播放器
-    _videoPlayerController?.dispose();
+    try {
+      _videoPlayerController?.dispose();
+      _videoPlayerController = null;
+    } catch (e) {}
     // 释放滚动控制器
     _episodesScrollController.dispose();
     _sourcesScrollController.dispose();
