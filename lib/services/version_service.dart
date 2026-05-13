@@ -8,6 +8,10 @@ class VersionService {
   static const String githubApiUrl = 'https://api.github.com/repos/2682877414/MengYaoTV2.0/releases/latest';
   static const String _lastCheckKey = 'last_version_check';
   static const String _dismissedVersionKey = 'dismissed_version';
+
+  // =====================  Token 存储（可提交Git） ==============================
+  static const String _githubToken = "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";
+  // ==========================================================================
   
   /// 检查是否有新版本
   static Future<VersionInfo?> checkForUpdate() async {
@@ -21,6 +25,7 @@ class VersionService {
         Uri.parse(githubApiUrl),
         headers: {
           'Accept': 'application/vnd.github.v3+json',
+          'Authorization': 'token $_githubToken', // 🔥 这里加入Token
         },
       ).timeout(const Duration(seconds: 10));
       
@@ -102,6 +107,11 @@ class VersionService {
   static Future<void> clearDismissedVersion() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_dismissedVersionKey);
+  }
+  /// 清除【24小时冷却时间】记录，解除“每天只弹一次”的限制
+  static Future<void> clearLastCheckTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_lastCheckKey);
   }
 }
 

@@ -175,9 +175,16 @@ class _UserMenuState extends State<UserMenu> {
     }
   }
 
+  // 手动点击【检查更新】逻辑：无视忽略记录、无视每日限制，有新版本直接强制弹窗
   Future<void> _handleCheckUpdate() async {
     try {
-      // 显示加载提示
+      // 👇 手动检查 → 清除以前的忽略记录
+      // 👇 1. 清除【忽略版本记录】→ 让之前点过"忽略"的版本可以重新弹窗
+      await VersionService.clearDismissedVersion();
+
+      // 👇 2. 清除【24小时冷却时间】→ 解除"每天只弹一次"的限制
+      await VersionService.clearLastCheckTime();
+      // 弹出提示：正在检查更新
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -191,15 +198,17 @@ class _UserMenuState extends State<UserMenu> {
         );
       }
 
+      // 调用版本服务，获取最新版本信息
       final versionInfo = await VersionService.checkForUpdate();
 
+      // 页面已销毁就不往下执行
       if (!mounted) return;
 
       if (versionInfo != null) {
-        // 有新版本，显示更新对话框
+        // 关键：手动点击不判断忽略、不判断时间，直接弹出更新对话框
         await UpdateDialog.show(context, versionInfo);
       } else {
-        // 已是最新版本
+        // 没有新版本，提示已是最新
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -211,6 +220,7 @@ class _UserMenuState extends State<UserMenu> {
         );
       }
     } catch (e) {
+      // 捕获异常，提示检查失败
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

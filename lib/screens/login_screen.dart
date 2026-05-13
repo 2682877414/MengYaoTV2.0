@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // 所有服务器地址
   static const List<Map<String, String>> serverList = [
     {"name": "主服务器", "url": "http://moontv2.yzc2682877414.cc.cd"},
-    {"name": "本地备用", "url": "http://192.168.1.174:5895"},
+    {"name": "本地备用", "url": "http://192.168.1.151:5895"},
   ];
 
   int _logoTapCount = 0;
