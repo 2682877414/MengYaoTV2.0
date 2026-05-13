@@ -83,61 +83,88 @@ class _DownloadEpisodeSheetState extends State<DownloadEpisodeSheet> {
 
           // 剧集网格列表区域
           Expanded(
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const AlwaysScrollableScrollPhysics(), // 超出可滚动
-              // 网格布局配置
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,    // 一行4个集数按钮
-                crossAxisSpacing: 12, // 左右间距
-                mainAxisSpacing: 12,  // 上下间距
-                childAspectRatio: 2,  // 按钮宽高比例
-              ),
-              itemCount: widget.episodes.length,
-              itemBuilder: (context, index) {
-                // 当前单集名称
-                final ep = widget.episodes[index];
-                // 判断当前集是否被选中
-                final isSelected = _selected.contains(ep);
+            // 使用 LayoutBuilder 获取屏幕方向，实现横竖屏不同布局
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // 获取屏幕方向（竖屏 / 横屏）
+                final orientation = MediaQuery.orientationOf(context);
 
-                return GestureDetector(
-                  // 点击整行切换选中状态
-                  onTap: () {
-                    setState(() {
-                      isSelected ? _selected.remove(ep) : _selected.add(ep);
-                    });
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      // 选中/未选中 背景色区分
-                      color: isSelected
-                          ? (isDark ? Colors.grey[700] : Colors.grey[300])
-                          : (isDark ? Colors.grey[800] : Colors.grey[200]),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      children: [
-                        // 复选框
-                        Checkbox(
-                          value: isSelected,
-                          onChanged: (v) {
-                            setState(() {
-                              v == true ? _selected.add(ep) : _selected.remove(ep);
-                            });
-                          },
-                          fillColor: WidgetStateProperty.all(Colors.transparent),
-                          checkColor: theme.textTheme.bodyLarge?.color,
-                        ),
-                        // 集数文字
-                        Text(
-                          ep,
-                          style: TextStyle(
-                            color: theme.textTheme.bodyLarge?.color,
-                          ),
-                        ),
-                      ],
-                    ),
+                // 定义变量：根据方向自动切换列数和宽高比
+                late int crossAxisCount;
+                late double childAspectRatio;
+
+                // 竖屏（手机正常拿）
+                if (orientation == Orientation.portrait) {
+                  crossAxisCount = 4;    // 一行4个
+                  childAspectRatio = 2.8; // 加宽按钮，让文字能完整显示
+                }
+                // 横屏（手机横着拿）
+                else {
+                  crossAxisCount = 6;    // 一行6个
+                  childAspectRatio = 3.5; // 更宽，文字完全不挤
+                }
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const AlwaysScrollableScrollPhysics(), // 超出可滚动
+                  // 网格布局配置（动态根据横竖屏变化）
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 12, // 左右间距
+                    mainAxisSpacing: 12,  // 上下间距
+                    childAspectRatio: childAspectRatio, // 按钮宽高比例（动态）
                   ),
+                  itemCount: widget.episodes.length,
+                  itemBuilder: (context, index) {
+                    // 当前单集名称
+                    final ep = widget.episodes[index];
+                    // 判断当前集是否被选中
+                    final isSelected = _selected.contains(ep);
+
+                    return GestureDetector(
+                      // 点击整行切换选中状态
+                      onTap: () {
+                        setState(() {
+                          isSelected ? _selected.remove(ep) : _selected.add(ep);
+                        });
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          // 选中/未选中 背景色区分
+                          color: isSelected
+                              ? (isDark ? Colors.grey[700] : Colors.grey[300])
+                              : (isDark ? Colors.grey[800] : Colors.grey[200]),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            // 复选框：用于标记是否选中该集
+                            Checkbox(
+                              value: isSelected,
+                              onChanged: (v) {
+                                setState(() {
+                                  v == true ? _selected.add(ep) : _selected.remove(ep);
+                                });
+                              },
+                              fillColor: WidgetStateProperty.all(Colors.transparent),
+                              checkColor: theme.textTheme.bodyLarge?.color,
+                            ),
+
+                            // 关键修复：用 Expanded 包裹文字，让文字自适应剩余宽度，不拉伸、不溢出
+                            Expanded(
+                              child: Text(
+                                ep, // 显示集数名称（第1集、第2集...）
+                                style: TextStyle(
+                                  color: theme.textTheme.bodyLarge?.color,
+                                ),
+                                // 已移除省略号，文字完整显示
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
