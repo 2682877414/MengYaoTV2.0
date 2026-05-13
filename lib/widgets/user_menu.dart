@@ -13,6 +13,7 @@ import '../services/version_service.dart';
 import '../utils/device_utils.dart';
 import '../utils/font_utils.dart';
 import 'update_dialog.dart';
+import '../screens/download_center_screen.dart';
 
 class UserMenu extends StatefulWidget {
   final bool isDarkMode;
@@ -892,6 +893,58 @@ class _UserMenuState extends State<UserMenu> {
                       color: widget.isDarkMode
                           ? const Color(0xFF374151)
                           : const Color(0xFFe5e7eb),
+                    ),
+                    // 分割线
+                    Container(
+                      height: 1,
+                      color: widget.isDarkMode
+                          ? const Color(0xFF374151)
+                          : const Color(0xFFe5e7eb),
+                    ),
+                    // 下载中心入口 - 点击跳转下载管理页面
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          // 关闭侧边用户菜单
+                          widget.onClose?.call();
+                          // 跳转到下载中心页面
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const DownloadCenterScreen(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              // 下载中心图标
+                              Icon(
+                                LucideIcons.folderDown,
+                                size: 20,
+                                color: const Color(0xFF10b981),
+                              ),
+                              const SizedBox(width: 12),
+                              // 菜单文字
+                              Text(
+                                '缓存下载中心',
+                                style: FontUtils.poppins(
+                                  fontSize: 16,
+                                  color: widget.isDarkMode
+                                      ? const Color(0xFFffffff)
+                                      : const Color(0xFF1f2937),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                     // 检查更新按钮
                     Material(
