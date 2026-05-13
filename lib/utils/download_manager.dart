@@ -31,6 +31,9 @@ class DownloadTask {
   /// Windows进程对象
   Process? process;
 
+  /// ====================== 新增：观看进度（秒）默认0 ======================
+  int watchPositionSeconds;
+
   /// 构造函数
   DownloadTask({
     required this.dramaName,
@@ -41,6 +44,8 @@ class DownloadTask {
     this.savePath,
     this.isPaused = false,
     this.process,
+    // 新增默认值
+    this.watchPositionSeconds = 0,
   });
 
   /// 获取拼接后的标题（剧集名-集数名）
@@ -54,6 +59,8 @@ class DownloadTask {
       'url': url,
       'savePath': savePath,
       'isCompleted': isCompleted,
+      // ====================== 新增：保存观看进度 ======================
+      'watchPositionSeconds': watchPositionSeconds,
     };
   }
 
@@ -65,6 +72,33 @@ class DownloadTask {
       url: map['url'],
       savePath: map['savePath'],
       isCompleted: map['isCompleted'] ?? false,
+      // ====================== 新增：读取观看进度 ======================
+      watchPositionSeconds: map['watchPositionSeconds'] ?? 0,
+    );
+  }
+
+  /// ====================== 新增：copyWith 用于更新进度不破坏其他数据 ======================
+  DownloadTask copyWith({
+    String? dramaName,
+    String? episodeName,
+    String? url,
+    double? progress,
+    bool? isCompleted,
+    String? savePath,
+    bool? isPaused,
+    Process? process,
+    int? watchPositionSeconds,
+  }) {
+    return DownloadTask(
+      dramaName: dramaName ?? this.dramaName,
+      episodeName: episodeName ?? this.episodeName,
+      url: url ?? this.url,
+      progress: progress ?? this.progress,
+      isCompleted: isCompleted ?? this.isCompleted,
+      savePath: savePath ?? this.savePath,
+      isPaused: isPaused ?? this.isPaused,
+      process: process ?? this.process,
+      watchPositionSeconds: watchPositionSeconds ?? this.watchPositionSeconds,
     );
   }
 }
@@ -113,6 +147,21 @@ class DownloadManager extends ChangeNotifier {
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('downloads', _completedList.map((e) => jsonEncode(e.toMap())).toList());
+  }
+
+  /// ====================== 新增：更新任务（用于保存播放进度） ======================
+  Future<void> updateTask(DownloadTask task) async {
+    int index = _completedList.indexWhere((t) =>
+    t.dramaName == task.dramaName &&
+        t.episodeName == task.episodeName &&
+        t.url == task.url
+    );
+
+    if (index != -1) {
+      _completedList[index] = task;
+      await _save();
+      notifyListeners();
+    }
   }
 
   /// 获取Windows平台ffmpeg.exe路径，不存在则释放内置资源

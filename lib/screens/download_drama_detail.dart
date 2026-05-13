@@ -44,6 +44,9 @@ class _LocalVideoPlayerScreenState extends State<LocalVideoPlayerScreen> {
   /// 当前使用的倍速（默认正常 1.0x）
   double _currentSpeed = 1.0;
 
+  /// 找到当前播放的下载任务
+  late DownloadTask _currentTask;
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +62,21 @@ class _LocalVideoPlayerScreenState extends State<LocalVideoPlayerScreen> {
 
     // 设置初始播放速度
     player.setRate(_currentSpeed);
+
+    // ====================== 找到当前播放任务 ======================
+    _currentTask = DownloadManager.instance.completedList.firstWhere(
+          (t) => t.savePath == widget.filePath,
+    );
+
+    // ====================== 自动记录播放进度 ======================
+    player.stream.position.listen((Duration p) {
+      if (mounted && p.inSeconds > 0) {
+        _currentTask = _currentTask.copyWith(
+          watchPositionSeconds: p.inSeconds,
+        );
+        DownloadManager.instance.updateTask(_currentTask);
+      }
+    });
   }
 
   @override
@@ -187,6 +205,23 @@ class _DownloadDramaDetailScreenState extends State<DownloadDramaDetailScreen> {
   /// 下载管理实例
   final DownloadManager _downloadManager = DownloadManager.instance;
 
+  /// ====================== 新增工具方法：获取视频文件大小 ======================
+  String _getVideoSize(String? path) {
+    if (path == null || !File(path).existsSync()) return "0MB";
+    final bytes = File(path).lengthSync();
+    final mb = bytes / 1024 / 1024;
+    return "${mb.toStringAsFixed(2)}MB";
+  }
+
+  /// ====================== 新增工具方法：秒数转 分:秒 格式 ======================
+  String _formatSecondToTime(int seconds) {
+    int m = seconds ~/ 60;
+    int s = seconds % 60;
+    String minute = m.toString().padLeft(2, '0');
+    String second = s.toString().padLeft(2, '0');
+    return "$minute:$second";
+  }
+
   @override
   Widget build(BuildContext context) {
     /// 筛选出当前这部剧的所有已下载任务
@@ -214,10 +249,22 @@ class _DownloadDramaDetailScreenState extends State<DownloadDramaDetailScreen> {
         itemCount: dramaTasks.length,
         itemBuilder: (context, index) {
           final task = dramaTasks[index];
+          // 获取文件大小
+          final sizeText = _getVideoSize(task.savePath);
+          // 判断观看进度
+          final int watchSec = task.watchPositionSeconds;
+          final String watchText = watchSec > 0
+              ? "已观看至 ${_formatSecondToTime(watchSec)}"
+              : "未观看";
+
           return ListTile(
             leading: const Icon(Icons.video_file, color: Colors.blue),
             title: Text(task.episodeName),
-            subtitle: const Text("已下载 → 点击播放"),
+            // 显示：已下载 + 文件大小 + 观看状态/进度
+            subtitle: Text(
+              "已下载 · $sizeText · $watchText",
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
             // 点击 → 播放本地视频
             onTap: () {
               if (task.savePath == null || !File(task.savePath!).existsSync()) {
@@ -236,7 +283,10 @@ class _DownloadDramaDetailScreenState extends State<DownloadDramaDetailScreen> {
                     title: task.episodeName,
                   ),
                 ),
-              );
+              ).then((_) {
+                // 播放返回后刷新列表，更新观看进度
+                setState(() {});
+              });
             },
             // 右侧删除按钮
             trailing: IconButton(
