@@ -2655,38 +2655,70 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   @override
   void dispose() {
-    // 标记页面已销毁，防止异步回调继续执行
+    debugPrint("🔥 [dispose] 页面开始销毁 >>>");
+
     _isInitialized = false;
+    debugPrint("✅ [dispose] _isInitialized = false (页面已锁定销毁)");
 
-    // 🔥 【绝杀】先强制断开关联，防止纹理二次释放
+    // 1. 最优先：移除播放器进度监听（绝杀崩溃）
     try {
+      debugPrint("🧹 [dispose] 移除视频进度监听器");
+      _removeVideoProgressListener();
+      debugPrint("✅ [dispose] 监听器移除成功");
+    } catch (e) {
+      debugPrint("❌ [dispose] 移除监听器失败: $e");
+    }
+
+    // 2. 暂停播放器
+    try {
+      debugPrint("⏸ [dispose] 尝试暂停播放器");
       _videoPlayerController?.pause();
-      _videoPlayerController = null; // 立刻切断所有引用，让系统知道没人再碰它
+      debugPrint("✅ [dispose] 播放器暂停成功");
+    } catch (e) {
+      debugPrint("❌ [dispose] 暂停播放器失败: $e");
+    }
+
+    // 3. 销毁前强制保存一次进度
+    try {
+      debugPrint("💾 [dispose] 保存播放进度");
+      _saveProgress(force: true, scene: '页面销毁');
+      debugPrint("✅ [dispose] 进度保存成功");
+    } catch (e) {
+      debugPrint("❌ [dispose] 保存进度失败: $e");
+    }
+
+    // 4. 系统资源
+    try {
+      debugPrint("🧹 [dispose] 清理系统资源");
+      WidgetsBinding.instance.removeObserver(this);
+      _restoreOrientation();
+      SystemChrome.setSystemUIOverlayStyle(_originalStyle);
+      debugPrint("✅ [dispose] 系统资源清理完成");
     } catch (e) {}
 
-    // 保存进度
-    _saveProgress(force: true, scene: '页面销毁');
-    // 移除视频进度监听器
-    _removeVideoProgressListener();
-    // 移除应用生命周期监听器
-    WidgetsBinding.instance.removeObserver(this);
-    // 恢复屏幕方向
-    _restoreOrientation();
-    // 恢复原始的系统UI样式
-    SystemChrome.setSystemUIOverlayStyle(_originalStyle);
-    // 销毁播放器
+    // 5. 滚动控制器
     try {
-      _videoPlayerController?.dispose();
-      _videoPlayerController = null;
+      debugPrint("🧹 [dispose] 清理滚动控制器");
+      _episodesScrollController.dispose();
+      _sourcesScrollController.dispose();
+      debugPrint("✅ [dispose] 滚动控制器清理完成");
     } catch (e) {}
-    // 释放滚动控制器
-    _episodesScrollController.dispose();
-    _sourcesScrollController.dispose();
-    // 释放动画控制器
-    _refreshAnimationController.dispose();
-    _loadingAnimationController.dispose();
-    _textAnimationController.dispose();
-    _switchLoadingAnimationController.dispose();
+
+    // 6. 动画控制器
+    try {
+      debugPrint("🧹 [dispose] 清理动画控制器");
+      _refreshAnimationController.dispose();
+      _loadingAnimationController.dispose();
+      _textAnimationController.dispose();
+      _switchLoadingAnimationController.dispose();
+      debugPrint("✅ [dispose] 动画控制器清理完成");
+    } catch (e) {}
+
+    // 7. 清空播放器引用
+    debugPrint("ℹ️ [dispose] 播放器交由系统自动回收");
+    _videoPlayerController = null;
+
+    debugPrint("🏁 [dispose] 页面销毁流程全部执行完成！\n\n");
     super.dispose();
   }
 
